@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MediTrack Settings</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .screen {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px 0;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- MAIN SCREEN -->
+  <div id="mainScreen" class="screen">
+    <h1 id="mainTitle">MediTrack Pill System</h1>
+
+    <!-- QR Code (your existing QR code stays here) -->
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MediTrack">
+
+    <br>
+    <button id="btnSettings" onclick="openSettings()">Settings</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="settingsScreen" class="screen hidden">
+    <h2 id="settingsTitle">Settings</h2>
+
+    <button id="btnClock" onclick="openClock()">Change Daily Clock</button>
+    <button id="btnDate" onclick="openDate()">Change Date</button>
+    <button id="btnLang" onclick="openLanguage()">Change Language</button>
+
+    <button id="btnBack1" onclick="goBack()">Back</button>
+  </div>
+
+  <!-- CLOCK SCREEN -->
+  <div id="clockScreen" class="screen hidden">
+    <h2 id="clockTitle">Change Daily Clock</h2>
+
+    <label id="labelHour">Hour:</label>
+    <input type="number" id="hour" min="1" max="12"><br>
+
+    <label id="labelMinutes">Minutes:</label>
+    <input type="number" id="minutes" min="0" max="59"><br>
+
+    <label id="labelAMPM">AM/PM:</label>
+    <select id="ampm">
+      <option>AM</option>
+      <option>PM</option>
+    </select><br>
+
+    <button id="btnSaveClock" onclick="saveClock()">Save</button>
+    <button id="btnBack2" onclick="openSettings()">Back</button>
+  </div>
+
+  <!-- DATE SCREEN -->
+  <div id="dateScreen" class="screen hidden">
+    <h2 id="dateTitle">Change Date</h2>
+
+    <label id="labelDay">Day:</label>
+    <input type="number" id="day" min="1" max="31"><br>
+
+    <label id="labelMonth">Month:</label>
+    <input type="number" id="month" min="1" max="12"><br>
+
+    <button id="btnSaveDate" onclick="saveDate()">Save</button>
+    <button id="btnBack3" onclick="openSettings()">Back</button>
+  </div>
+
+  <!-- LANGUAGE SCREEN -->
+  <div id="languageScreen" class="screen hidden">
+    <h2 id="languageTitle">Change Language</h2>
+
+    <select id="languageSelect">
+      <option value="en">English</option>
+      <option value="ar">Arabic</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+      <option value="ru">Russian</option>
+    </select><br>
+
+    <button id="btnSaveLang" onclick="saveLanguage()">Save</button>
+    <button id="btnBack4" onclick="openSettings()">Back</button>
+  </div>
+
+  <script>
+    /* -------------------------
+       TRANSLATION DICTIONARY
+    --------------------------*/
+    const translations = {
+      en: {
+        mainTitle: "MediTrack Pill System",
+        settings: "Settings",
+        changeClock: "Change Daily Clock",
+        changeDate: "Change Date",
+        changeLanguage: "Change Language",
+        back: "Back",
+        hour: "Hour",
+        minutes: "Minutes",
+        ampm: "AM/PM",
+        save: "Save",
+        day: "Day",
+        month: "Month",
+        languageTitle: "Change Language",
+        clockTitle: "Change Daily Clock",
+        dateTitle: "Change Date"
+      },
+
+      ar: {
+        mainTitle: "نظام تتبع الدواء",
+        settings: "الإعدادات",
+        changeClock: "تغيير الساعة اليومية",
+        changeDate: "تغيير التاريخ",
+        changeLanguage: "تغيير اللغة",
+        back: "رجوع",
+        hour: "الساعة",
+        minutes: "الدقائق",
+        ampm: "ص/م",
+        save: "حفظ",
+        day: "اليوم",
+        month: "الشهر",
+        languageTitle: "تغيير اللغة",
+        clockTitle: "تغيير الساعة اليومية",
+        dateTitle: "تغيير التاريخ"
+      },
+
+      es: {
+        mainTitle: "Sistema MediTrack",
+        settings: "Configuración",
+        changeClock: "Cambiar reloj diario",
+        changeDate: "Cambiar fecha",
+        changeLanguage: "Cambiar idioma",
+        back: "Volver",
+        hour: "Hora",
+        minutes: "Minutos",
+        ampm: "AM/PM",
+        save: "Guardar",
+        day: "Día",
+        month: "Mes",
+        languageTitle: "Cambiar idioma",
+        clockTitle: "Cambiar reloj diario",
+        dateTitle: "Cambiar fecha"
+      },
+
+      fr: {
+        mainTitle: "Système MediTrack",
+        settings: "Paramètres",
+        changeClock: "Changer l'horloge quotidienne",
+        changeDate: "Changer la date",
+        changeLanguage: "Changer la langue",
+        back: "Retour",
+        hour: "Heure",
+        minutes: "Minutes",
+        ampm: "AM/PM",
+        save: "Enregistrer",
+        day: "Jour",
+        month: "Mois",
+        languageTitle: "Changer la langue",
+        clockTitle: "Changer l'horloge quotidienne",
+        dateTitle: "Changer la date"
+      },
+
+      ru: {
+        mainTitle: "Система MediTrack",
+        settings: "Настройки",
+        changeClock: "Изменить ежедневные часы",
+        changeDate: "Изменить дату",
+        changeLanguage: "Изменить язык",
+        back: "Назад",
+        hour: "Часы",
+        minutes: "Минуты",
+        ampm: "AM/PM",
+        save: "Сохранить",
+        day: "День",
+        month: "Месяц",
+        languageTitle: "Изменить язык",
+        clockTitle: "Изменить ежедневные часы",
+        dateTitle: "Изменить дату"
+      }
+    };
+
+    /* -------------------------
+       SCREEN NAVIGATION
+    --------------------------*/
+    function hideAll() {
+      document.getElementById("settingsScreen").classList.add("hidden");
+      document.getElementById("clockScreen").classList.add("hidden");
+      document.getElementById("dateScreen").classList.add("hidden");
+      document.getElementById("languageScreen").classList.add("hidden");
+      document.getElementById("mainScreen").classList.add("hidden");
+    }
+
+    function openSettings() {
+      hideAll();
+      document.getElementById("settingsScreen").classList.remove("hidden");
+    }
+
+    function openClock() {
+      hideAll();
+      document.getElementById("clockScreen").classList.remove("hidden");
+    }
+
+    function openDate() {
+      hideAll();
+      document.getElementById("dateScreen").classList.remove("hidden");
+    }
+
+    function openLanguage() {
+      hideAll();
+      document.getElementById("languageScreen").classList.remove("hidden");
+    }
+
+    function goBack() {
+      hideAll();
+      document.getElementById("mainScreen").classList.remove("hidden");
+    }
+
+    /* -------------------------
+       SAVE FUNCTIONS
+    --------------------------*/
+    function saveClock() {
+      alert("Clock saved!");
+    }
+
+    function saveDate() {
+      alert("Date saved!");
+    }
+
+    function saveLanguage() {
+      const lang = document.getElementById("languageSelect").value;
+      applyLanguage(lang);
+      alert("Language changed");
+    }
+
+    /* -------------------------
+       APPLY LANGUAGE + RTL
+    --------------------------*/
+    function applyLanguage(lang) {
+      const t = translations[lang];
+
+      document.getElementById("mainTitle").innerText = t.mainTitle;
+      document.getElementById("btnSettings").innerText = t.settings;
+
+      document.getElementById("settingsTitle").innerText = t.settings;
+      document.getElementById("btnClock").innerText = t.changeClock;
+      document.getElementById("btnDate").innerText = t.changeDate;
+      document.getElementById("btnLang").innerText = t.changeLanguage;
+
+      document.getElementById("btnBack1").innerText = t.back;
+      document.getElementById("btnBack2").innerText = t.back;
+      document.getElementById("btnBack3").innerText = t.back;
+      document.getElementById("btnBack4").innerText = t.back;
+
+      document.getElementById("clockTitle").innerText = t.clockTitle;
+      document.getElementById("dateTitle").innerText = t.dateTitle;
+      document.getElementById("languageTitle").innerText = t.languageTitle;
+
+      document.getElementById("labelHour").innerText = t.hour + ":";
+      document.getElementById("labelMinutes").innerText = t.minutes + ":";
+      document.getElementById("labelAMPM").innerText = t.ampm + ":";
+
+      document.getElementById("labelDay").innerText = t.day + ":";
+      document.getElementById("labelMonth").innerText = t.month + ":";
+
+      document.getElementById("btnSaveClock").innerText = t.save;
+      document.getElementById("btnSaveDate").innerText = t.save;
+      document.getElementById("btnSaveLang").innerText = t.save;
+
+      // RTL for Arabic
+      if (lang === "ar") {
+        document.body.style.direction = "rtl";
+        document.body.style.textAlign = "right";
+      } else {
+        document.body.style.direction = "ltr";
+        document.body.style.textAlign = "left";
+      }
+    }
+  </script>
+
+</body>
+</html>

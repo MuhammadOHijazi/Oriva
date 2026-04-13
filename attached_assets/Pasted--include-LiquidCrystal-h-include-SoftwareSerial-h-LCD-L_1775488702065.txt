@@ -1,0 +1,267 @@
+#include <LiquidCrystal.h>
+#include <SoftwareSerial.h>
+
+// ===== LCD =====
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
+// ===== Bluetooth =====
+SoftwareSerial BT(13, A0); // RX, TX
+
+// ===== Pins =====
+const int led1   = 8;
+const int led2   = 9;
+const int led3   = 10;
+const int buzzer = 11;
+const int button = 12;
+
+// ===== إحصائيات =====
+int taken  = 0;
+int missed = 0;
+int total  = 0;
+int consecutiveMissed = 0;
+
+// ===== متغيرات =====
+bool medicineTaken = false;
+bool lastButtonState = HIGH;
+
+// ===== مدة الانتظار =====
+const int BASE_WAIT = 10;
+
+// ================================================
+void setup() {
+  lcd.begin(16, 2);
+  BT.begin(9600);
+
+  pinMode(led1, OUTPUT);
+  pinMode(led2, OUTPUT);
+  pinMode(led3, OUTPUT);
+  pinMode(buzzer, OUTPUT);
+  pinMode(button, INPUT_PULLUP);
+
+  lcd.print("ORVIA");
+  delay(1500);
+  lcd.clear();
+
+  BT.println("System Started");
+}
+
+// ================================================
+void loop() {
+
+  for (int box = 1; box <= 3; box++) {
+
+    medicineTaken = false;
+    total++;
+
+    int earlySeconds = consecutiveMissed * 2;
+    int waitTime = BASE_WAIT - earlySeconds;
+    if (waitTime < 4) waitTime = 4;
+
+    if (box > 1) {
+      smartWait(waitTime, earlySeconds);
+    }
+
+    showBox(box);
+    runAlerts();
+
+    if (medicineTaken) {
+      taken++;
+      consecutiveMissed = 0;
+      successAnimation();
+
+      BT.print("Box ");
+      BT.print(box);
+      BT.println(" Taken");
+
+    } else {
+      missed++;
+      consecutiveMissed++;
+      if (consecutiveMissed > 3) consecutiveMissed = 3;
+      missedAnimation();
+
+      BT.print("Box ");
+      BT.print(box);
+      BT.println(" Missed");
+
+      // 🚨 إذا نسي 3 مرات متتالية
+      if (consecutiveMissed >= 3) {
+        BT.println("ALERT: Notify Caregiver");
+      }
+    }
+
+    showDoseResult(box);
+    delay(2000);
+  }
+
+  showResult();
+
+  // Reset
+  taken  = 0;
+  missed = 0;
+  total  = 0;
+  consecutiveMissed = 0;
+
+  delay(3000);
+}
+
+// ================================================
+
+void showBox(int box) {
+  lcd.clear();
+  lcd.print("Open Box:");
+  lcd.setCursor(0, 1);
+  lcd.print(box);
+
+  if (box == 1) digitalWrite(led1, HIGH);
+  if (box == 2) digitalWrite(led2, HIGH);
+  if (box == 3) digitalWrite(led3, HIGH);
+
+  BT.print("Open Box: ");
+  BT.println(box);
+
+  delay(1000);
+}
+
+// ================================================
+
+void runAlerts() {
+
+  for (int i = 0; i < 3; i++) {
+
+    tone(buzzer, 800 + i * 400);
+
+    for (int t = 0; t < 10; t++) {
+
+      delay(300);
+
+      bool currentState = digitalRead(button);
+
+      if (lastButtonState == HIGH && currentState == LOW) {
+        medicineTaken = true;
+
+        noTone(buzzer);
+        turnOffLEDs();
+
+        BT.println("Button Pressed");
+
+        delay(200);
+        return;
+      }
+
+      lastButtonState = currentState;
+    }
+
+    noTone(buzzer);
+    delay(300);
+  }
+
+  turnOffLEDs();
+}
+
+// ================================================
+
+void smartWait(int waitSec, int earlySeconds) {
+  lcd.clear();
+
+  if (earlySeconds > 0) {
+    lcd.print("Smart Reminder");
+    BT.println("Early Reminder Activated");
+  } else {
+    lcd.print("Next dose soon");
+  }
+
+  for (int s = waitSec; s > 0; s--) {
+    lcd.setCursor(0, 1);
+    lcd.print("Wait:");
+    lcd.print(s);
+    delay(1000);
+  }
+}
+
+// ================================================
+
+void showDoseResult(int box) {
+  lcd.clear();
+  lcd.print("Box ");
+  lcd.print(box);
+  lcd.print(": ");
+  lcd.print(medicineTaken ? "Taken" : "Missed");
+
+  BT.print("Result Box ");
+  BT.print(box);
+  BT.print(": ");
+  BT.println(medicineTaken ? "Taken" : "Missed");
+
+  delay(2000);
+}
+
+// ================================================
+
+void successAnimation() {
+  lcd.clear();
+  lcd.print("Done!");
+
+  tone(buzzer, 1500);
+  delay(300);
+  noTone(buzzer);
+}
+
+// ================================================
+
+void missedAnimation() {
+  lcd.clear();
+  lcd.print("Missed!");
+
+  tone(buzzer, 400);
+  delay(500);
+  noTone(buzzer);
+}
+
+// ================================================
+
+void turnOffLEDs() {
+  digitalWrite(led1, LOW);
+  digitalWrite(led2, LOW);
+  digitalWrite(led3, LOW);
+}
+
+// ================================================
+
+void showResult() {
+
+  float percent = (total == 0) ? 0 : ((float)taken / total) * 100;
+
+  lcd.clear();
+  lcd.print("Result:");
+  lcd.setCursor(0, 1);
+  lcd.print(percent);
+
+  BT.print("Final نسبة: ");
+  BT.println(percent);
+
+  delay(3000);
+
+  // 🚨 إغلاق النظام 10 ثواني إذا سيء
+  if (percent <= 60) {
+
+    lcd.clear();
+    lcd.print("WARNING!");
+
+    BT.println("WARNING LOW PERFORMANCE");
+
+    for (int i = 0; i < 5; i++) {
+      tone(buzzer, 400);
+      delay(300);
+      noTone(buzzer);
+      delay(300);
+    }
+
+    // 🔒 إيقاف 10 ثواني
+    lcd.clear();
+    lcd.print("System Locked");
+
+    BT.println("System Locked 10 sec");
+
+    delay(10000);
+  }
+}

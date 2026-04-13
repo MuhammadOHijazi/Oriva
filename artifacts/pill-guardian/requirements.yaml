@@ -1,0 +1,19 @@
+packages:
+  "framer-motion": "For smooth page transitions and micro-interactions"
+  "date-fns": "For robust date and time formatting"
+  "react-hook-form": "For building complex, validated forms"
+  "@hookform/resolvers": "For Zod schema validation integration"
+  "zod": "For strongly typed form validation schemas"
+  "clsx": "For conditional class name merging"
+  "tailwind-merge": "For resolving Tailwind CSS class conflicts"
+  "lucide-react": "For beautiful, consistent iconography"
+
+images:
+  - path: "artifacts/pill-guardian/public/images/medical-bg.png"
+    description: "A pristine, soft, abstract gradient mesh background in very light medical blues, teals, and white. Conveys trust, cleanliness, and calm healthcare."
+    aspect_ratio: "16:9"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react.
+  - Using react-hook-form and Zod for robust client-side validation before sending to API.
+  - ESP32 status is fetched via polling the /api/esp32/status endpoint to maintain connection awareness.

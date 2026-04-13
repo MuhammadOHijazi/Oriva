@@ -1,0 +1,417 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Pill Guardian API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: guardian
+    description: Guardian management
+  - name: patient
+    description: Patient management
+  - name: pills
+    description: Pill schedule management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /guardian:
+    get:
+      operationId: getGuardian
+      tags: [guardian]
+      summary: Get guardian info
+      responses:
+        "200":
+          description: Guardian info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guardian"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: saveGuardian
+      tags: [guardian]
+      summary: Save guardian info
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuardianInput"
+      responses:
+        "200":
+          description: Guardian saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guardian"
+
+  /patient:
+    get:
+      operationId: getPatient
+      tags: [patient]
+      summary: Get patient info
+      responses:
+        "200":
+          description: Patient info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: savePatient
+      tags: [patient]
+      summary: Save patient info
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatientInput"
+      responses:
+        "200":
+          description: Patient saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /pills:
+    get:
+      operationId: getPills
+      tags: [pills]
+      summary: Get all pills
+      responses:
+        "200":
+          description: List of pills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pill"
+    post:
+      operationId: addPill
+      tags: [pills]
+      summary: Add a new pill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PillInput"
+      responses:
+        "201":
+          description: Pill created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pill"
+
+  /pills/{id}:
+    put:
+      operationId: updatePill
+      tags: [pills]
+      summary: Update a pill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PillInput"
+      responses:
+        "200":
+          description: Pill updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pill"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePill
+      tags: [pills]
+      summary: Delete a pill
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pill deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pills/{id}/taken:
+    post:
+      operationId: markPillTaken
+      tags: [pills]
+      summary: Mark a pill as taken
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pill marked as taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pill"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pills/{id}/reset:
+    post:
+      operationId: resetPillTaken
+      tags: [pills]
+      summary: Reset pill taken status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pill reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pill"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /esp32/status:
+    get:
+      operationId: getEsp32Status
+      tags: [health]
+      summary: Get ESP32 connection status
+      responses:
+        "200":
+          description: ESP32 status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Esp32Status"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    Guardian:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nickname:
+          type: string
+        phone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - nickname
+        - phone
+        - createdAt
+        - updatedAt
+
+    GuardianInput:
+      type: object
+      properties:
+        name:
+          type: string
+        nickname:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - nickname
+        - phone
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nickname:
+          type: string
+        phone:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - nickname
+        - phone
+        - createdAt
+        - updatedAt
+
+    PatientInput:
+      type: object
+      properties:
+        name:
+          type: string
+        nickname:
+          type: string
+        phone:
+          type: string
+      required:
+        - name
+        - nickname
+        - phone
+
+    Pill:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        steps:
+          type: string
+        scheduledTime:
+          type: string
+          description: Time in HH:MM format
+        done:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - steps
+        - scheduledTime
+        - done
+        - createdAt
+        - updatedAt
+
+    PillInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        steps:
+          type: string
+        scheduledTime:
+          type: string
+          description: Time in HH:MM format
+      required:
+        - name
+        - description
+        - steps
+        - scheduledTime
+
+    Esp32Status:
+      type: object
+      properties:
+        connected:
+          type: boolean
+        connectedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - connected

@@ -1,0 +1,276 @@
+# ============================
+# FILE 1 — main.py
+# ============================
+
+from flask import Flask, render_template, request, jsonify, send_file
+from flask_sock import Sock
+import qrcode
+import json
+import threading
+import time
+from datetime import datetime
+
+app = Flask(__name__)
+sock = Sock(app)
+
+guardian = {}
+patient = {}
+pills = []
+ws_connections = set()
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/save_guardian", methods=["POST"])
+def save_guardian():
+    global guardian
+    guardian = request.json
+    with open("guardian.json", "w") as f:
+        json.dump(guardian, f)
+    return jsonify({"message": "Guardian saved"})
+
+@app.route("/save_patient", methods=["POST"])
+def save_patient():
+    global patient
+    patient = request.json
+    with open("patient.json", "w") as f:
+        json.dump(patient, f)
+    return jsonify({"message": "Patient saved"})
+
+@app.route("/add_pill", methods=["POST"])
+def add_pill():
+    global pills
+    pill = request.json
+    pill["done"] = False
+    pills.append(pill)
+    with open("pills.json", "w") as f:
+        json.dump(pills, f)
+    return jsonify({"message": "Pill added"})
+
+@app.route("/generate_qr")
+def generate_qr():
+    apk_url = "https://YOUR_APK_DOWNLOAD_LINK_HERE"
+    img = qrcode.make(apk_url)
+    img.save("qr.png")
+    return send_file("qr.png", mimetype="image/png")
+
+@app.route("/pill_taken", methods=["POST"])
+def pill_taken():
+    pill_name = request.json["pill"]
+    for pill in pills:
+        if pill["name"] == pill_name:
+            pill["done"] = True
+    send_to_esp32("STOP")
+    return jsonify({"message": "Pill marked as taken"})
+
+@sock.route('/ws')
+def ws_route(ws):
+    ws_connections.add(ws)
+    try:
+        while True:
+            data = ws.receive()
+            print("ESP32:", data)
+    except:
+        ws_connections.remove(ws)
+
+def send_to_esp32(msg):
+    for ws in list(ws_connections):
+        try:
+            ws.send(msg)
+        except:
+            ws_connections.remove(ws)
+
+def alarm_thread():
+    while True:
+        now = datetime.now().strftime("%H:%M")
+
+        for pill in pills:
+            if now == pill["time"] and not pill["done"]:
+                print("Alarm triggered")
+                send_to_esp32("ALARM_NOW")
+
+                time.sleep(300)
+                if not pill["done"]:
+                    send_to_esp32("ALARM_REPEAT")
+
+                time.sleep(300)
+                if not pill["done"]:
+                    print("Guardian alert needed")
+
+        time.sleep(1)
+
+threading.Thread(target=alarm_thread, daemon=True).start()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
+
+
+
+# ============================
+# FILE 2 — templates/index.html
+# ============================
+
+"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pill Guardian</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, textarea, button {
+            width: 100%; padding: 12px; margin: 8px 0;
+            border: 1px solid #ccc; border-radius: 6px;
+        }
+        .section {
+            background: #f5f5f5;
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Pill Guardian</h1>
+
+<div class="section">
+<h3>Guardian Information</h3>
+<input id="g_name" placeholder="Guardian Name">
+<input id="g_nick" placeholder="Guardian Nickname">
+<input id="g_phone" placeholder="Guardian Phone Number">
+<button onclick="saveGuardian()">Save Guardian</button>
+</div>
+
+<div class="section">
+<h3>Patient Information</h3>
+<input id="p_name" placeholder="Patient Name">
+<input id="p_nick" placeholder="Patient Nickname">
+<input id="p_phone" placeholder="Patient Phone Number">
+<button onclick="savePatient()">Save Patient</button>
+</div>
+
+<div class="section">
+<h3>Pill Information</h3>
+<input id="pill_name" placeholder="Pill Name">
+<textarea id="pill_desc" placeholder="What does the pill do?"></textarea>
+<textarea id="pill_steps" placeholder="Steps before taking the pill"></textarea>
+<input id="pill_time" type="time">
+<button onclick="addPill()">Add Pill</button>
+</div>
+
+<div class="section">
+<h3>APK Download QR</h3>
+/generate_qr<button>Generate QR Code</button>
+</div>
+
+<script>
+function saveGuardian() {
+    fetch("/save_guardian", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("g_name").value,
+            nickname: document.getElementById("g_nick").value,
+            phone: document.getElementById("g_phone").value
+        })
+    });
+}
+
+function savePatient() {
+    fetch("/save_patient", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("p_name").value,
+            nickname: document.getElementById("p_nick").value,
+            phone: document.getElementById("p_phone").value
+        })
+    });
+}
+
+function addPill() {
+    fetch("/add_pill", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            name: document.getElementById("pill_name").value,
+            description: document.getElementById("pill_desc").value,
+            steps: document.getElementById("pill_steps").value,
+            time: document.getElementById("pill_time").value
+        })
+    });
+}
+</script>
+
+</body>
+</html>
+"""
+
+
+
+# ============================
+# FILE 3 — requirements.txt
+# ============================
+
+"""
+flask
+flask-sock
+qrcode
+gunicorn
+gevent
+"""
+
+
+
+# ============================
+# FILE 4 — ESP32 CODE (Arduino)
+# ============================
+
+"""
+#include <WiFi.h>
+#include <WebSocketsClient.h>
+
+const char* ssid = "YOUR_WIFI";
+const char* password = "YOUR_PASS";
+
+WebSocketsClient ws;
+
+int buzzer = 5;
+int led = 2;
+
+void onMessage(WStype_t type, uint8_t * payload, size_t length) {
+    if (type == WStype_TEXT) {
+        String msg = (char*)payload;
+
+        if (msg == "ALARM_NOW" || msg == "ALARM_REPEAT") {
+            tone(buzzer, 1000);
+            digitalWrite(led, HIGH);
+            delay(2500);
+            noTone(buzzer);
+            digitalWrite(led, LOW);
+        }
+
+        if (msg == "STOP") {
+            noTone(buzzer);
+            digitalWrite(led, LOW);
+        }
+    }
+}
+
+void setup() {
+    pinMode(buzzer, OUTPUT);
+    pinMode(led, OUTPUT);
+
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) delay(300);
+
+    ws.begin("YOUR_API_HOST_HERE", 80, "/ws");
+    ws.onEvent(onMessage);
+}
+
+void loop() {
+    ws.loop();
+}
+"""
